@@ -1,0 +1,32 @@
+{
+  "Displays": {
+    "LibraryPath": "\\NVRAM\\DisplayLibrary.dll",
+    "Display": [
+      {
+        "ClassName": "DisplayLibrary.EpsonProjector",
+        "ID": "Primary Display",
+        "ReceiverId": 12
+      },
+      {
+        "ClassName": "DisplayLibrary.EpsonProjector",
+        "ID": "Secondary Display",
+        "ReceiverId": 13
+      }
+    ]
+  },
+  "UserInterfaces": {
+    "LibraryPath": "Crestron.SimplSharpPro.UI.dll",
+    "Interface": [
+      {
+        "ClassName": "Crestron.SimplSharpPro.UI.Tsw550",
+        "ID": "Main UI",
+        "IpId": 21
+      },
+      {
+        "ClassName": "Crestron.SimplSharpPro.UI.XpanelForSmartGraphics",
+        "ID": "Support XPanel",
+        "IpId": 22
+      }
+    ]
+  }
+}

@@ -263,6 +263,10 @@ namespace ReflectionExample
         void uiCasted_OnlineStatusChange(GenericBase currentDevice, OnlineOfflineEventArgs args)
         {
             CrestronConsole.PrintLine("Online status changed for {0}: {1}", currentDevice.ID, args.DeviceOnLine);
+            if (args.DeviceOnLine)
+            {
+                ErrorLog.Notice("{0} has come online.", currentDevice.ID);
+            }
         }
 
         private object ReadConfig(object callbackObject)

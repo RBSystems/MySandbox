@@ -5,6 +5,9 @@ using Crestron.SimplSharpPro.CrestronThread;        	// For Threading
 using Crestron.SimplSharpPro.Diagnostics;		    	// For System Monitor Access
 using Crestron.SimplSharpPro.DeviceSupport;
 using Crestron.SimplSharpPro.UI;
+using Crestron.SimplSharpPro.DM;
+using Crestron.SimplSharpPro.DM.Cards;
+using Crestron.SimplSharpPro.DM.Endpoints;
 using Utilities.Interfaces;
 using Crestron.SimplSharp.Reflection;
 using Utilities.JsonParser;

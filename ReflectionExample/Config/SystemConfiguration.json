@@ -1,0 +1,62 @@
+{
+  "Displays": {
+    "LibraryPath": "\\NVRAM\\DisplayLibrary.dll",
+    "Display": [
+      {
+        "ClassName": "DisplayLibrary.EpsonProjector",
+        "ID": "Primary Display",
+        "ReceiverId": 12
+      },
+      {
+        "ClassName": "DisplayLibrary.EpsonProjector",
+        "ID": "Secondary Display",
+        "ReceiverId": 13
+      }
+    ]
+  },
+  "UserInterfaces": {
+    "LibraryPath": "Crestron.SimplSharpPro.UI.dll",
+    "Interface": [
+      {
+        "ClassName": "Crestron.SimplSharpPro.UI.Tsw550",
+        "ID": "Main UI",
+        "IpId": 21
+      },
+      {
+        "ClassName": "Crestron.SimplSharpPro.UI.XpanelForSmartGraphics",
+        "ID": "Support XPanel",
+        "IpId": 22
+      }
+    ]
+  },
+  "AvSwitchers": {
+    "LibraryPath": "Crestron.SimplSharpPro.DM",
+    "AvSwitch": [
+      {
+        "ClassName": "Crestron.SimplSharpPro.DM.DmMd8x8",
+        "ID": "AvSwitch",
+        "Master": "r-a104d-2s-cp3n.mesa.gmu.edu",
+        "InputCards": [
+          {
+            "ClassName": "Crestron.SimplSharpPro.Dm.Cards.Dmc4kHd",
+            "SlotNumber": 1
+          },
+          {
+            "ClassName": "Crestron.SimplSharpPro.Dm.Cards.Dmc4kHd",
+            "SlotNumber": 2
+          }
+        ],
+        "OutputCards": [
+          {
+            "ClassName": "Crestron.SimplSharpPro.DM.Cards.Dmco55",
+            "SlotNumber": 1
+          },
+          {
+            "ClassName": "Crestron.SimplSharpPro.Dm.Cards.Dmco55",
+            "SlotNumber": 2
+          }
+        ]
+      }
+    ]
+  }
+}

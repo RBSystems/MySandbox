@@ -76,6 +76,7 @@
     <Compile Include="Interfaces\IBaseDevice.cs" />
     <Compile Include="Interfaces\IDisplay.cs" />
     <Compile Include="Interfaces\ISwitcher.cs" />
+    <Compile Include="JsonParser\AvSwitcherData.cs" />
     <Compile Include="JsonParser\DisplayData.cs" />
     <Compile Include="JsonParser\InterfaceData.cs" />
     <Compile Include="JsonParser\JsonHelper.cs" />

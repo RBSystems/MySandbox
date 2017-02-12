@@ -2,14 +2,8 @@ using System;
 using Crestron.SimplSharp;                          	// For Basic SIMPL# Classes
 using Crestron.SimplSharpPro;                       	// For Basic SIMPL#Pro classes
 using Crestron.SimplSharpPro.CrestronThread;        	// For Threading
-using Crestron.SimplSharpPro.Diagnostics;		    	// For System Monitor Access
 using Crestron.SimplSharpPro.DeviceSupport;
-using Crestron.SimplSharpPro.UI;
-using Crestron.SimplSharpPro.DM;
-using Crestron.SimplSharpPro.DM.Cards;
-using Crestron.SimplSharpPro.DM.Endpoints;
 using Utilities.Interfaces;
-using Crestron.SimplSharp.Reflection;
 using Utilities.JsonParser;
 using System.Collections.Generic;
 
@@ -22,6 +16,8 @@ namespace ReflectionExample
         private Thread readConfigThread;
         private Thread CreateDisplaysThread;
         private Thread CreateInterfaceThread;
+        private Thread CreateAvSwitcherThread;
+        private CEvent WaitForSwitchers;
         private static string CONFIG_PATH = @"\NVRAM\SystemConfiguration.json";
 
         /// <summary>
@@ -77,7 +73,8 @@ namespace ReflectionExample
         {
             try
             {
-                readConfigThread = new Thread(ReadConfig, null, Thread.eThreadStartOptions.CreateSuspended);                
+                readConfigThread = new Thread(ReadConfig, null, Thread.eThreadStartOptions.CreateSuspended);
+                WaitForSwitchers = new CEvent(false, false);
             }
             catch (Exception e)
             {
@@ -177,30 +174,31 @@ namespace ReflectionExample
                 readConfigThread = new Thread(ReadConfig, null, Thread.eThreadStartOptions.Running);
         }
 
+        private void ReadAndBuildRxTx(object threadCallbackObject)
+        {
+            bool wasSet = WaitForSwitchers.Wait(5000);
+            if (wasSet) // Build displays only if AV Switcher triggered event.
+            {
+                CrestronConsole.PrintLine("Building Tx and Rx devices...");
+
+                //TODO create all receiver & transmitter objects that are in the configuration data.
+                ReadAndBuildDisplays(threadCallbackObject);
+            }
+            else
+            {
+                ErrorLog.Warn("Tx/Rx devices and displays not configured -- AV Switcher configuration did not respond.");
+            }
+        }
+
         private object ReadAndBuildDisplays(object obj)
         {
             CrestronConsole.PrintLine("Building display objects...");
+
             // Create display objects from DLL
             SystemConfiguration configData = (SystemConfiguration)obj;
-            try
-            {
-                Assembly da = Assembly.LoadFrom(configData.Displays.LibraryPath);
-                foreach (Display d in configData.Displays.Display)
-                {
-                    CType dt = da.GetType(d.ClassName);
-                    ConstructorInfo ci = dt.GetConstructor(new CType[] {});
-                    object displayObj = ci.Invoke(new object[] { });
+            displays = ReflectionHelper.GetIDisplays(configData);
 
-                    IDisplay disp = (IDisplay)displayObj;
-                    disp.Initialize(d.ID);
-                    displays.Add(disp);
-                }
-            }
-            catch (Exception e)
-            {
-                ErrorLog.Error("Failed to created IDisplay objects: {0}", e);
-            }
-
+            // Print results to console
             CrestronConsole.PrintLine("Result of display configuration build:");
             foreach (IDisplay d in displays)
             {
@@ -213,45 +211,48 @@ namespace ReflectionExample
         {
             CrestronConsole.PrintLine("Building User Interfaces...");
             SystemConfiguration config = (SystemConfiguration)obj;
-            try
-            {
-                Assembly uiAssembly = Assembly.LoadFrom(config.UserInterfaces.LibraryPath);
-                foreach (Interface ui in config.UserInterfaces.Interface)
-                {
-                    CType tp = uiAssembly.GetType(ui.ClassName);
-                    ConstructorInfo ci = tp.GetConstructor(new CType[] { typeof(UInt32), typeof(CrestronControlSystem) });
-                    object uiObject = ci.Invoke(new object[] { Convert.ToUInt32(ui.IpId), this });
 
-                    BasicTriListWithSmartObject uiCasted = (BasicTriListWithSmartObject)uiObject;
-                    if (uiCasted.Register() != eDeviceRegistrationUnRegistrationResponse.Success)
-                    {
-                        ErrorLog.Error("Unable to register {0} -- {1}", ui.ID, uiCasted.RegistrationFailureReason);
-                    }
-                    else
-                    {
-                        uiCasted.OnlineStatusChange += new OnlineStatusChangeEventHandler(uiCasted_OnlineStatusChange);
-                        uiCasted.SigChange += new SigEventHandler(uiCasted_SigChange);
-                        Interfaces.Add(ui.ID, uiCasted);
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                CrestronConsole.PrintLine("Failed to create Interface objects: {0}", e);
-            }
+            Interfaces = ReflectionHelper.GetUserInterfaces(config, this);
 
             foreach (var kvp in Interfaces)
             {
-                CrestronConsole.PrintLine("{0} - {1}", kvp.Key, kvp.Value.GetType().FullName);
+                if (Interfaces[kvp.Key].Register() == eDeviceRegistrationUnRegistrationResponse.Success)
+                {
+                    Interfaces[kvp.Key].OnlineStatusChange += InterfacesOnlineStatusChange;
+                    Interfaces[kvp.Key].SigChange += InterfaceSigChange;
+                    CrestronConsole.PrintLine("{0} - {1}", kvp.Key, kvp.Value.GetType().FullName);
+                }
+                else
+                {
+                    ErrorLog.Error("Unable to register {0} at ID {1}.", Interfaces[kvp.Key], Interfaces[kvp.Key].ID);
+                }
             }
             return null;
         }
 
-        void uiCasted_SigChange(BasicTriList currentDevice, SigEventArgs args)
+        private object ReadAndBuildAvSwitchers(object obj)
+        {
+            //TODO Call JSON helper and get all AV Switcher configurations
+            //TODO Create thread for building all transmitters and receiver devices, then connect them to the AV Switch
+            Thread.Sleep(2000);
+            WaitForSwitchers.Set();
+            return null;
+        }
+
+        private void InterfaceSigChange(BasicTriList currentDevice, SigEventArgs args)
         {
             switch (args.Sig.Type)
             {
                 case eSigType.Bool:
+                    if (args.Sig.BoolValue)
+                    {
+                        // Print results to console
+                        CrestronConsole.PrintLine("Result of display configuration build:");
+                        foreach (IDisplay d in displays)
+                        {
+                            CrestronConsole.PrintLine("{0} - pwr={1}; mute={2}", d.ID, d.Power, d.ShowVideo);
+                        }
+                    }
                     break;
                 case eSigType.String:
                     break;
@@ -263,7 +264,7 @@ namespace ReflectionExample
             }
         }
 
-        void uiCasted_OnlineStatusChange(GenericBase currentDevice, OnlineOfflineEventArgs args)
+        private void InterfacesOnlineStatusChange(GenericBase currentDevice, OnlineOfflineEventArgs args)
         {
             CrestronConsole.PrintLine("Online status changed for {0}: {1}", currentDevice.ID, args.DeviceOnLine);
             if (args.DeviceOnLine)
@@ -295,6 +296,9 @@ namespace ReflectionExample
         {
             CreateDisplaysThread = new Thread(ReadAndBuildDisplays, config, Thread.eThreadStartOptions.Running);
             CreateInterfaceThread = new Thread(ReadAndBuildInterfaces, config, Thread.eThreadStartOptions.Running);
+
+            //TODO Have Display & Endpoint/Transmitter configuration wait for swicher to be built (Use CEvent)
+            CreateAvSwitcherThread = new Thread(ReadAndBuildAvSwitchers, config, Thread.eThreadStartOptions.Running);
         }
 
         private void Cleanup()

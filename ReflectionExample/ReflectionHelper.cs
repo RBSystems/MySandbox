@@ -5,158 +5,85 @@ using System.Text;
 using Crestron.SimplSharp;
 using Crestron.SimplSharp.Reflection;
 using Utilities.Interfaces;
+using Utilities.JsonParser;
+using Crestron.SimplSharpPro.DeviceSupport;
+using Crestron.SimplSharpPro;
 
 namespace ReflectionExample
 {
-    public class ReflectionHelper
+    /// <summary>
+    /// Helper class used to parse JSON objects for hardware configuration.
+    /// Uses Reflection to obtain base hardware classes.
+    /// </summary>
+    public static class ReflectionHelper
     {
-        private Assembly targetAssembly;    // Used to dynamically load a DLL
-        private Object refObject;           // The Reflected class will be loaded to this reference
-        private CType refType;              // Used to gather the refObject type and make calling fields/methods possible
-
-        public ReflectionHelper() {}
-
-        public void DisplayAllHelloWorldClasses()
+        /// <summary>
+        /// Parse JSON data for all displays used in the system.
+        /// </summary>
+        /// <param name="ConfigObject">a data object containing all system information</param>
+        /// <returns>a list of all displays in the configure. Logs an error to the processor if opening DLL and getting data fails.</returns>
+        public static List<IDisplay> GetIDisplays(SystemConfiguration ConfigObject)
         {
-            targetAssembly = Assembly.LoadFrom(@"\NVRAM\HelloWorldLibrary.dll"); // Load DLL file into memory
-            if (targetAssembly.FullName.ToLower().Contains("helloworldlibrary"))
+            List<IDisplay> displays = new List<IDisplay>();
+            try
             {
-                refObject = targetAssembly.CreateInstance("HelloWorldLibrary.HelloWorld"); // Creat a HelloWorld object
-                refType = refObject.GetType();
-
-                // Print out all class data to the console.
-                foreach (CType type in targetAssembly.GetTypes())
+                Assembly da = Assembly.LoadFrom(ConfigObject.Displays.LibraryPath);
+                foreach (Display d in ConfigObject.Displays.Display)
                 {
-                    CrestronConsole.PrintLine("Type of obj: {0}", type.FullName);
+                    CType dt = da.GetType(d.ClassName);
+                    ConstructorInfo ci = dt.GetConstructor(new CType[] { });
+                    object displayObj = ci.Invoke(new object[] { });
 
-                    // Print out all constructors and their parameters
-                    foreach (ConstructorInfo ci in type.GetConstructors())
-                    {
-                        CrestronConsole.PrintLine("Constructor {0}", ci.Name);
-                        foreach (ParameterInfo p in ci.GetParameters())
-                        {
-                            CrestronConsole.PrintLine("Param: {0} - {1}", p.Name, p.ParameterType);
-                        }
-                    }
-
-                    // Print out all properties and their read/write access
-                    foreach (PropertyInfo prop in type.GetProperties())
-                    {
-                        CrestronConsole.PrintLine("{0} {1} get: {2}; set {3}", prop.PropertyType.Name, prop.Name, prop.CanRead, prop.CanWrite);
-                    }
-
-                    // Print out all fields and their types
-                    foreach (FieldInfo fi in type.GetFields())
-                    {
-                        CrestronConsole.PrintLine("{0} {1}", fi.FieldType.Name, fi.Name);
-                    }
-
-                    // Print out all methods and their parameters
-                    foreach (MethodInfo mi in type.GetMethods())
-                    {
-                        CrestronConsole.PrintLine("{0} {1}", mi.ReturnType.Name, mi.Name);
-                        foreach (ParameterInfo mip in mi.GetParameters())
-                        {
-                            CrestronConsole.PrintLine("{0} - {1}", mip.ParameterType.Name, mip.Name);
-                        }
-                    }
-                    CrestronConsole.PrintLine(string.Empty);
-                    CrestronConsole.PrintLine(string.Empty);
+                    IDisplay disp = (IDisplay)displayObj;
+                    disp.Initialize(d.ID);
+                    displays.Add(disp);
                 }
             }
-            else
+            catch (Exception e)
             {
-                CrestronConsole.PrintLine("Unable to find HelloWorldLibrary.dll in NVRAM.");
+                ErrorLog.Error("Failed to created IDisplay objects: {0}", e);
             }
+            return displays;
         }
 
-        public void HelloWorld()
+        /// <summary>
+        /// Creates a dictionary of touchscreen, xpanel, and other user interfaces used in a system based on a configuration object.
+        /// </summary>
+        /// <param name="configObject">the configuration data parsed from the config file</param>
+        /// <param name="master">the control processor that the interfaces will connect to.</param>
+        /// <returns>A dictionary containing all of the found interfaces. They will be assigned to 'master' but not registered.</returns>
+        public static Dictionary<string, BasicTriListWithSmartObject> GetUserInterfaces(SystemConfiguration configObject, CrestronControlSystem master)
         {
-            targetAssembly = Assembly.LoadFrom(@"\NVRAM\HelloWorldLibrary.dll"); // Load DLL file into memory
-            if (targetAssembly.FullName.ToLower().Contains("helloworldlibrary"))
-            {
-                refObject = targetAssembly.CreateInstance("HelloWorldLibrary.HelloWorld"); // Creat a HelloWorld object
-                refType = refObject.GetType();
+            Dictionary<string, BasicTriListWithSmartObject> interfaces = new Dictionary<string, BasicTriListWithSmartObject>();
 
-                // Get a known property from the reference object and set it's value;
-                PropertyInfo refInfo = refType.GetProperty("Enabled");
-                if(!(bool)refInfo.GetValue(refObject,new Object[] {}))
+            try
+            {
+                Assembly uiAssembly = Assembly.LoadFrom(configObject.UserInterfaces.LibraryPath);
+                foreach (Interface ui in configObject.UserInterfaces.Interface)
                 {
-                    refInfo.SetValue(refObject, true, new Object[] {});
+                    CType tp = uiAssembly.GetType(ui.ClassName);
+                    ConstructorInfo ci = tp.GetConstructor(new CType[] { typeof(UInt32), typeof(CrestronControlSystem) });
+                    object uiObject = ci.Invoke(new object[] { Convert.ToUInt32(ui.IpId), master });
+
+                    BasicTriListWithSmartObject uiCasted = (BasicTriListWithSmartObject)uiObject;
+                    interfaces.Add(ui.ID, uiCasted);
                 }
-
-                // Get expected method from reference type and call that method with no arguments
-                MethodInfo refMethod = refType.GetMethod("PrintMessage");
-                refMethod.Invoke(refObject, new Object[] { });
-
-                // Get an expected method from reference type and call that method with appropriate arguments
-                MethodInfo refMethod2 = refType.GetMethod("PrintCustomMessage");
-                refMethod2.Invoke(refObject, new Object[] { "This is a custom message." });
             }
-            else
+            catch (Exception e)
             {
-                ErrorLog.Error("Unable to find HelloWorldLibrary.dll in NVRAM.");
+                CrestronConsole.PrintLine("Failed to create Interface objects: {0}", e);
             }
+            return interfaces;
         }
 
-        public void ReportDisplays()
+        public static void GetAvSwitch()
         {
-            targetAssembly = Assembly.LoadFrom(@"\NVRAM\DisplayLibrary.dll");
-            foreach (CType type in targetAssembly.GetTypes())
-            {
-                CrestronConsole.PrintLine("Object Type: {0}", type.FullName);
-                CrestronConsole.PrintLine("Constructors: ");
-                foreach (ConstructorInfo c in type.GetConstructors())
-                {
-                    CrestronConsole.Print("\t{0}(", c.Name);
-                    foreach (ParameterInfo p in c.GetParameters())
-                    {
-                        CrestronConsole.Print("{0} {1}, ", p.ParameterType, p.Name);
-                    }
-                    CrestronConsole.Print(")");
-                }
-                CrestronConsole.PrintLine(string.Empty);
-
-                CrestronConsole.PrintLine("Properties: ");
-                foreach (PropertyInfo p in type.GetProperties())
-                {
-                    CrestronConsole.PrintLine("\t{0} {1} Get: {2}; Set: {3}", p.PropertyType.Name, p.Name, p.CanRead, p.CanWrite);
-                }
-                CrestronConsole.PrintLine(string.Empty);
-
-                CrestronConsole.PrintLine("Methods:");
-                foreach (MethodInfo m in type.GetMethods())
-                {
-                    CrestronConsole.Print("{0}(",m.Name);
-                    foreach (ParameterInfo p in m.GetParameters())
-                    {
-                        CrestronConsole.Print("{0} {1}, ", p.ParameterType, p.Name);
-                    }
-                    CrestronConsole.Print(");");
-                    CrestronConsole.PrintLine(string.Empty);
-                }
-            }
+            //TODO Make this method build a switcher and return it to the calling object.
         }
 
-        public IDisplay GetIDisplayObject()
+        public static void GetRxTxDevices()
         {
-            IDisplay display = null;
-            
-            return display;
-        }
-
-        private bool searchForInterface(CType[] types, string interfaceName)
-        {
-            bool result = false;
-            foreach (CType type in types)
-            {
-                if (type.Name == interfaceName)
-                {
-                    result = true;
-                    break;
-                }
-            }
-            return result;
+            //TODO Make this method build all TX and RX objects and return them to the caller.
         }
     }
 }

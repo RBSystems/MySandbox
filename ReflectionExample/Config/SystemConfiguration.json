@@ -38,12 +38,20 @@
         "Master": "r-a104d-2s-cp3n.mesa.gmu.edu",
         "InputCards": [
           {
-            "ClassName": "Crestron.SimplSharpPro.Dm.Cards.Dmc4kHd",
+            "ClassName": "Crestron.SimplSharpPro.DM.Cards.Dmc4kHd",
             "SlotNumber": 1
           },
           {
-            "ClassName": "Crestron.SimplSharpPro.Dm.Cards.Dmc4kHd",
+            "ClassName": "Crestron.SimplSharpPro.DM.Cards.Dmc4kHd",
             "SlotNumber": 2
+          },
+          {
+			"ClassName" : "Crestron.SimplSharpPro.DM.Cards.DmcC",
+			"SlotNumber" : 3
+          },
+          {
+			"ClassName" : "Crestron.SimplSharpPro.DM.Cards.DmcC",
+			"SlotNumber" : 4
           }
         ],
         "OutputCards": [

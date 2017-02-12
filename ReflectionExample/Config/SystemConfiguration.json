@@ -30,12 +30,12 @@
     ]
   },
   "AvSwitchers": {
-    "LibraryPath": "Crestron.SimplSharpPro.DM",
+    "LibraryPath": "Crestron.SimplSharpPro.DM.dll",
     "AvSwitch": [
       {
         "ClassName": "Crestron.SimplSharpPro.DM.DmMd8x8",
         "ID": "AvSwitch",
-        "Master": "r-a104d-2s-cp3n.mesa.gmu.edu",
+        "IpId": 42,
         "InputCards": [
           {
             "ClassName": "Crestron.SimplSharpPro.DM.Cards.Dmc4kHd",

@@ -10,5 +10,6 @@ namespace Utilities.JsonParser
     {
         public Displays Displays { get; set; }
         public UserInterfaces UserInterfaces { get; set; }
+        public AvSwitchers AvSwitchers { get; set; }
     }
 }

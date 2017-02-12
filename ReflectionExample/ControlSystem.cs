@@ -6,6 +6,8 @@ using Crestron.SimplSharpPro.DeviceSupport;
 using Utilities.Interfaces;
 using Utilities.JsonParser;
 using System.Collections.Generic;
+using Crestron.SimplSharpPro.DM;
+using Crestron.SimplSharpPro.DM.Cards;
 
 namespace ReflectionExample
 {
@@ -13,6 +15,7 @@ namespace ReflectionExample
     {
         private List<IDisplay> displays;
         private Dictionary<string, BasicTriListWithSmartObject> Interfaces;
+        private List<Switch> AvSwitchers;
         private Thread readConfigThread;
         private Thread CreateDisplaysThread;
         private Thread CreateInterfaceThread;
@@ -49,6 +52,7 @@ namespace ReflectionExample
 
                 displays = new List<IDisplay>();
                 Interfaces = new Dictionary<string, BasicTriListWithSmartObject>();
+                AvSwitchers = new List<Switch>();
             }
             catch (Exception e)
             {
@@ -232,10 +236,51 @@ namespace ReflectionExample
 
         private object ReadAndBuildAvSwitchers(object obj)
         {
-            //TODO Call JSON helper and get all AV Switcher configurations
-            //TODO Create thread for building all transmitters and receiver devices, then connect them to the AV Switch
-            Thread.Sleep(2000);
-            WaitForSwitchers.Set();
+            // Instantiate Switcher
+            //Switch sw = new DmMd8x8(0x42, this);
+            List<Switch> swList = ReflectionHelper.GetAvSwitch((SystemConfiguration)obj, this);
+            Switch sw;
+
+            if (swList.Count > 0)
+            {
+                sw = swList[0];
+                CrestronConsole.PrintLine("\n\t{0}", sw.SwitchType);
+            }
+            ////Create cards and add them to the switcher
+            //CardDevice c1 = new Dmc4kHd(1, sw);
+            //CardDevice c2 = new Dmc4kHd(2, sw);
+            //CardDevice c3 = new DmcC(3, sw);
+            //CardDevice c4 = new DmcC(4, sw);
+
+            //// Create output cards
+            //Dmco55 o1 = new Dmco55(1, sw);
+            //Dmco55 o2= new Dmco55(2, sw);
+
+            //if (sw.Register() != eDeviceRegistrationUnRegistrationResponse.Success)
+            //{
+            //    ErrorLog.Error("Failed to register DM-MD-8x8 device.");
+            //}
+            //else
+            //{
+            //    CrestronConsole.PrintLine("\nSwitch Type: {0}", sw.SwitchType);
+            //    CrestronConsole.PrintLine("InputCards:");
+            //    foreach (DMInput c in sw.Inputs)
+            //    {
+            //        CrestronConsole.PrintLine(c.Card.Type.ToString());
+            //    }
+
+            //    CrestronConsole.PrintLine(string.Empty);
+            //    CrestronConsole.PrintLine("Output Cards:");
+            //    foreach (DMOutput o in sw.Outputs)
+            //    {
+            //        CrestronConsole.PrintLine("{0}",o.Card.Type);
+            //    }
+            //}
+
+            ////TODO Call JSON helper and get all AV Switcher configurations
+            ////TODO Create thread for building all transmitters and receiver devices, then connect them to the AV Switch
+            //Thread.Sleep(2000);
+            //WaitForSwitchers.Set();
             return null;
         }
 

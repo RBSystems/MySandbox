@@ -85,6 +85,7 @@
     <Compile Include="ReflectionHelper.cs" />
     <None Include="Config\SystemConfiguration.json" />
     <None Include="Properties\ControlSystem.cfg" />
+    <None Include="UserInterfaces\XPanel.vtp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Utilities\Utilities.csproj">

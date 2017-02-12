@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Crestron.SimplSharp;
 using Crestron.SimplSharp.Reflection;
 using Utilities.Interfaces;
 using Utilities.JsonParser;
 using Crestron.SimplSharpPro.DeviceSupport;
 using Crestron.SimplSharpPro;
+using Crestron.SimplSharpPro.DM;
 
 namespace ReflectionExample
 {
@@ -76,9 +75,34 @@ namespace ReflectionExample
             return interfaces;
         }
 
-        public static void GetAvSwitch()
+        public static List<Switch> GetAvSwitch(SystemConfiguration configObject, CrestronControlSystem master)
         {
-            //TODO Make this method build a switcher and return it to the calling object.
+            List<Switch> switchers = new List<Switch>();
+            try
+            {
+                Assembly switchAssembly = Assembly.LoadFrom(configObject.AvSwitchers.LibraryPath);
+
+                foreach (AvSwitch sw in configObject.AvSwitchers.AvSwitch)
+                {
+                    CType swt = switchAssembly.GetType(sw.ClassName);
+                    ConstructorInfo ci = swt.GetConstructor(new CType[] { typeof(UInt32), typeof(CrestronControlSystem) });
+                    object swObject = ci.Invoke(new object[] { Convert.ToUInt32(sw.IpId), master });
+
+                    Switch swCasted = (Switch)swObject;
+                    switchers.Add(swCasted);
+                }
+                //TODO Instantiate the AV Switch
+                //TODO Get all Input cards
+                //TODO Get all Output cards
+                //TODO Get frame object
+                //TODO add input cards to frame
+                //TODO add output cards to frame
+            }
+            catch (Exception e)
+            {
+                ErrorLog.Error("Failed to retreive switcher data:\n{0} -- {1}\n", e.Message, e.StackTrace);
+            }
+            return switchers;
         }
 
         public static void GetRxTxDevices()
